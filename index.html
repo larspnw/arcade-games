@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕹️ Retro Arcade - Classic Games</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="arcade-container">
+        <header class="arcade-header">
+            <h1 class="neon-text">🕹️ RETRO ARCADE 🕹️</h1>
+            <p class="tagline">Insert Coin to Continue</p>
+        </header>
+
+        <!-- Main Menu View -->
+        <div id="menu-view" class="menu-view">
+            <div class="games-grid">
+                <div class="game-card" data-game="tetris">
+                    <div class="game-thumbnail tetris-thumb">
+                        <div class="tetris-preview">
+                            <div class="tetris-block" style="background: #00f0f0;"></div>
+                            <div class="tetris-block" style="background: #f0f000;"></div>
+                            <div class="tetris-block" style="background: #a000f0;"></div>
+                            <div class="tetris-block" style="background: #f00000;"></div>
+                        </div>
+                    </div>
+                    <h2>TETRIS</h2>
+                    <p class="game-desc">Stack the blocks!</p>
+                    <div class="high-score">
+                        High Score: <span class="score-value" id="tetris-high">0</span>
+                    </div>
+                    <button class="play-btn" onclick="loadGame('tetris')">PLAY</button>
+                </div>
+
+                <div class="game-card" data-game="pole-position">
+                    <div class="game-thumbnail pole-thumb">
+                        <div class="racing-preview">
+                            🏎️
+                            <div class="road-line"></div>
+                            <div class="road-line"></div>
+                        </div>
+                    </div>
+                    <h2>POLE POSITION</h2>
+                    <p class="game-desc">Race to the finish!</p>
+                    <div class="high-score">
+                        High Score: <span class="score-value" id="pole-position-high">0</span>
+                    </div>
+                    <button class="play-btn" onclick="loadGame('pole-position')">PLAY</button>
+                </div>
+
+                <div class="game-card" data-game="monaco-gp">
+                    <div class="game-thumbnail monaco-thumb">
+                        <div class="racing-preview">
+                            🏁
+                            <div class="road-line"></div>
+                            <div class="road-line"></div>
+                        </div>
+                    </div>
+                    <h2>MONACO GP</h2>
+                    <p class="game-desc">Dodge traffic!</p>
+                    <div class="high-score">
+                        High Score: <span class="score-value" id="monaco-gp-high">0</span>
+                    </div>
+                    <button class="play-btn" onclick="loadGame('monaco-gp')">PLAY</button>
+                </div>
+
+                <div class="game-card" data-game="frogger">
+                    <div class="game-thumbnail frogger-thumb">
+                        <div class="frogger-preview">
+                            🐸
+                            <div class="river"></div>
+                            <div class="road"></div>
+                        </div>
+                    </div>
+                    <h2>FROGGER</h2>
+                    <p class="game-desc">Cross safely!</p>
+                    <div class="high-score">
+                        High Score: <span class="score-value" id="frogger-high">0</span>
+                    </div>
+                    <button class="play-btn" onclick="loadGame('frogger')">PLAY</button>
+                </div>
+            </div>
+
+            <!-- High Scores Section -->
+            <div class="high-scores-section">
+                <h2 class="neon-text-small">🏆 HALL OF FAME 🏆</h2>
+                <div class="scores-container">
+                    <div class="score-column">
+                        <h3>TETRIS</h3>
+                        <ol id="tetris-scores" class="score-list"></ol>
+                    </div>
+                    <div class="score-column">
+                        <h3>POLE POSITION</h3>
+                        <ol id="pole-position-scores" class="score-list"></ol>
+                    </div>
+                    <div class="score-column">
+                        <h3>MONACO GP</h3>
+                        <ol id="monaco-gp-scores" class="score-list"></ol>
+                    </div>
+                    <div class="score-column">
+                        <h3>FROGGER</h3>
+                        <ol id="frogger-scores" class="score-list"></ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game View -->
+        <div id="game-view" class="game-view hidden">
+            <div class="game-controls">
+                <button class="back-btn" onclick="backToMenu()">⬅ BACK TO MENU</button>
+                <div class="current-game-info">
+                    <span id="current-game-name">Game</span>
+                    <span class="separator">|</span>
+                    <span>High: <span id="current-high-score">0</span></span>
+                </div>
+            </div>
+            <iframe id="game-frame" src="" frameborder="0"></iframe>
+        </div>
+
+        <footer class="arcade-footer">
+            <p>Made with ❤️ for retro gaming fans | Press F11 for fullscreen</p>
+        </footer>
+    </div>
+
+    <script src="js/highscores.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+</html>

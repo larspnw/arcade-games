@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monaco GP</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #fff;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #ff0;
+            margin-bottom: 10px;
+        }
+        .hud {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+        .hud span {
+            margin: 0 20px;
+        }
+        canvas {
+            border: 3px solid #ff0;
+            display: block;
+            margin: 20px auto;
+            background: #222;
+        }
+        button {
+            background: #ff0;
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.3em;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            margin: 10px;
+        }
+        button:hover {
+            background: #cc0;
+        }
+        .info {
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏎️ MONACO GP 🏎️</h1>
+    
+    <div class="hud">
+        <span>SCORE: <strong id="score">0</strong></span>
+        <span>SPEED: <strong id="speed">0</strong> mph</span>
+        <span>FUEL: <strong id="fuel">100</strong>%</span>
+    </div>
+    
+    <button onclick="startGame()">START RACE</button>
+    
+    <canvas id="game" width="400" height="700"></canvas>
+    
+    <div class="info">
+        <p>← → Steer | ↑ ↓ Speed</p>
+        <p>Dodge traffic and collect fuel!</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        
+        let gameRunning = false;
+        let score = 0;
+        let speed = 5;
+        let fuel = 100;
+        let cars = [];
+        let fuelCans = [];
+        let roadOffset = 0;
+        
+        const player = {
+            x: canvas.width / 2 - 20,
+            y: canvas.height - 100,
+            width: 30,
+            height: 50,
+            lane: 1
+        };
+        
+        const lanes = [100, 185, 270];
+        
+        class Car {
+            constructor() {
+                this.lane = Math.floor(Math.random() * 3);
+                this.x = lanes[this.lane];
+                this.y = -100;
+                this.width = 30;
+                this.height = 50;
+                this.speed = 3 + Math.random() * 2;
+                this.color = ['#f00', '#00f', '#0f0', '#fff'][Math.floor(Math.random() * 4)];
+            }
+            
+            update() {
+                this.y += this.speed + speed / 2;
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(this.x + 7, this.y + 5, 7, 7);
+                ctx.fillRect(this.x + 16, this.y + 5, 7, 7);
+            }
+        }
+        
+        class FuelCan {
+            constructor() {
+                this.lane = Math.floor(Math.random() * 3);
+                this.x = lanes[this.lane] + 5;
+                this.y = -100;
+                this.width = 20;
+                this.height = 20;
+            }
+            
+            update() {
+                this.y += speed;
+            }
+            
+            draw() {
+                ctx.fillStyle = '#0f0';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = '#000';
+                ctx.fillText('F', this.x + 6, this.y + 14);
+            }
+        }
+        
+        function drawRoad() {
+            ctx.fillStyle = '#444';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Road lanes
+            ctx.fillStyle = '#555';
+            ctx.fillRect(70, 0, 260, canvas.height);
+            
+            // Lane markings
+            ctx.fillStyle = '#fff';
+            for (let i = -2; i < 20; i++) {
+                const y = (i * 60 + roadOffset) % canvas.height;
+                ctx.fillRect(155, y, 4, 30);
+                ctx.fillRect(240, y, 4, 30);
+            }
+            
+            // Curbs
+            for (let i = 0; i < canvas.height; i += 20) {
+                const color = (i / 20) % 2 === 0 ? '#f00' : '#fff';
+                ctx.fillStyle = color;
+                ctx.fillRect(65, i, 5, 20);
+                ctx.fillRect(330, i, 5, 20);
+            }
+        }
+        
+        function drawPlayer() {
+            ctx.fillStyle = '#ff0';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // Number
+            ctx.fillStyle = '#000';
+            ctx.fillRect(player.x + 5, player.y + 15, 20, 20);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 16px Courier';
+            ctx.fillText('1', player.x + 12, player.y + 30);
+        }
+        
+        function updateGame() {
+            if (!gameRunning) return;
+            
+            // Clear
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            roadOffset += speed;
+            
+            drawRoad();
+            
+            // Spawn cars
+            if (Math.random() < 0.02) {
+                cars.push(new Car());
+            }
+            
+            // Spawn fuel
+            if (Math.random() < 0.005) {
+                fuelCans.push(new FuelCan());
+            }
+            
+            // Update cars
+            cars = cars.filter(car => {
+                car.update();
+                car.draw();
+                
+                // Collision
+                if (Math.abs(player.x - car.x) < 25 && 
+                    Math.abs(player.y - car.y) < 45) {
+                    gameOver('CRASH!');
+                    return false;
+                }
+                
+                return car.y < canvas.height + 100;
+            });
+            
+            // Update fuel cans
+            fuelCans = fuelCans.filter(can => {
+                can.update();
+                can.draw();
+                
+                // Collect
+                if (Math.abs(player.x - can.x) < 20 && 
+                    Math.abs(player.y - can.y) < 30) {
+                    fuel = Math.min(100, fuel + 20);
+                    score += 50;
+                    return false;
+                }
+                
+                return can.y < canvas.height;
+            });
+            
+            drawPlayer();
+            
+            // Update score and fuel
+            score += Math.floor(speed / 10);
+            fuel -= 0.05;
+            
+            if (fuel <= 0) {
+                gameOver('OUT OF FUEL!');
+                return;
+            }
+            
+            updateHUD();
+            
+            requestAnimationFrame(updateGame);
+        }
+        
+        function updateHUD() {
+            document.getElementById('score').textContent = Math.floor(score);
+            document.getElementById('speed').textContent = Math.floor(speed * 10);
+            document.getElementById('fuel').textContent = Math.floor(fuel);
+        }
+        
+        function gameOver(reason) {
+            gameRunning = false;
+            alert(`${reason}\nFinal Score: ${Math.floor(score)}`);
+        }
+        
+        function startGame() {
+            if (gameRunning) return;
+            
+            score = 0;
+            speed = 5;
+            fuel = 100;
+            cars = [];
+            fuelCans = [];
+            roadOffset = 0;
+            player.lane = 1;
+            player.x = lanes[1];
+            gameRunning = true;
+            
+            updateHUD();
+            requestAnimationFrame(updateGame);
+        }
+        
+        document.addEventListener('keydown', e => {
+            if (!gameRunning) return;
+            
+            if (e.key === 'ArrowLeft' && player.lane > 0) {
+                player.lane--;
+                player.x = lanes[player.lane];
+            }
+            if (e.key === 'ArrowRight' && player.lane < 2) {
+                player.lane++;
+                player.x = lanes[player.lane];
+            }
+            if (e.key === 'ArrowUp') speed = Math.min(15, speed + 0.5);
+            if (e.key === 'ArrowDown') speed = Math.max(3, speed - 0.5);
+        });
+    </script>
+</body>
+</html>

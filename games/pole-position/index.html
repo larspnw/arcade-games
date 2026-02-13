@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pole Position</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: #222;
+            color: #fff;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #f00;
+            margin-bottom: 10px;
+        }
+        .hud {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+        .hud span {
+            margin: 0 20px;
+        }
+        canvas {
+            border: 3px solid #f00;
+            display: block;
+            margin: 20px auto;
+            background: #555;
+        }
+        button {
+            background: #f00;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.3em;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            margin: 10px;
+        }
+        button:hover {
+            background: #c00;
+        }
+        .info {
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏁 POLE POSITION 🏁</h1>
+    
+    <div class="hud">
+        <span>LAP: <strong id="lap">1/5</strong></span>
+        <span>TIME: <strong id="time">0.0</strong></span>
+        <span>SPEED: <strong id="speed">0</strong> mph</span>
+    </div>
+    
+    <button onclick="startGame()">START RACE</button>
+    
+    <canvas id="game" width="600" height="700"></canvas>
+    
+    <div class="info">
+        <p>← → Steer | ↑ Accelerate | ↓ Brake</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        
+        let gameRunning = false;
+        let lap = 1;
+        let time = 0;
+        let speed = 0;
+        let trackPosition = 0;
+        let opponents = [];
+        let roadSegments = [];
+        
+        const player = {
+            x: canvas.width / 2 - 20,
+            y: canvas.height - 100,
+            width: 30,
+            height: 50,
+            speed: 0,
+            maxSpeed: 200,
+            acceleration: 0.5,
+            friction: 0.2,
+            dx: 0
+        };
+        
+        // Generate road segments
+        for (let i = 0; i < 200; i++) {
+            roadSegments.push({
+                y: i * 50,
+                curve: Math.sin(i * 0.3) * 100,
+                width: 300 + Math.sin(i * 0.2) * 50
+            });
+        }
+        
+        class Opponent {
+            constructor() {
+                this.x = Math.random() * 300 + 150;
+                this.y = -Math.random() * 500;
+                this.speed = 3 + Math.random() * 2;
+                this.width = 30;
+                this.height = 50;
+                this.color = ['#00f', '#0f0', '#ff0', '#f0f'][Math.floor(Math.random() * 4)];
+            }
+            
+            update() {
+                this.y += this.speed + player.speed / 30;
+                
+                if (this.y > canvas.height) {
+                    this.y = -Math.random() * 500;
+                    this.x = Math.random() * 300 + 150;
+                }
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(this.x + 5, this.y + 10, 8, 8);
+                ctx.fillRect(this.x + 17, this.y + 10, 8, 8);
+            }
+        }
+        
+        function spawnOpponents() {
+            opponents = [];
+            for (let i = 0; i < 5; i++) {
+                opponents.push(new Opponent());
+            }
+        }
+        
+        function drawRoad() {
+            // Sky
+            ctx.fillStyle = '#87ceeb';
+            ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
+            
+            // Ground
+            ctx.fillStyle = '#8b7355';
+            ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+            
+            // Road
+            ctx.fillStyle = '#333';
+            const roadWidth = 400;
+            const roadX = canvas.width / 2;
+            
+            // Perspective road
+            for (let i = 0; i < 20; i++) {
+                const y = canvas.height - i * 35;
+                const scale = 1 - i * 0.04;
+                const w = roadWidth * scale;
+                
+                ctx.fillStyle = i % 2 === 0 ? '#333' : '#444';
+                ctx.fillRect(roadX - w / 2, y, w, 35);
+                
+                // Road markings
+                if (Math.floor(trackPosition / 20 + i) % 3 === 0) {
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(roadX - 3, y + 15, 6, 10);
+                }
+            }
+        }
+        
+        function drawPlayer() {
+            ctx.fillStyle = '#f00';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // Windshield
+            ctx.fillStyle = '#00f';
+            ctx.fillRect(player.x + 5, player.y + 10, 20, 15);
+            
+            // Wheels
+            ctx.fillStyle = '#000';
+            ctx.fillRect(player.x - 3, player.y + 10, 5, 10);
+            ctx.fillRect(player.x + player.width - 2, player.y + 10, 5, 10);
+            ctx.fillRect(player.x - 3, player.y + 30, 5, 10);
+            ctx.fillRect(player.x + player.width - 2, player.y + 30, 5, 10);
+        }
+        
+        function updateGame() {
+            if (!gameRunning) return;
+            
+            // Clear
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw road
+            drawRoad();
+            
+            // Update physics
+            if (player.speed > 0) {
+                player.speed -= player.friction;
+            }
+            player.speed = Math.max(0, Math.min(player.maxSpeed, player.speed));
+            
+            // Update position
+            player.x += player.dx;
+            player.x = Math.max(100, Math.min(500, player.x));
+            
+            trackPosition += player.speed / 10;
+            
+            // Check lap completion
+            if (trackPosition > 1000) {
+                trackPosition = 0;
+                lap++;
+                if (lap > 5) {
+                    gameOver();
+                    return;
+                }
+                updateHUD();
+            }
+            
+            // Update opponents
+            opponents.forEach(opp => {
+                opp.update();
+                opp.draw();
+                
+                // Collision
+                if (Math.abs(player.x - opp.x) < 30 && 
+                    Math.abs(player.y - opp.y) < 50) {
+                    player.speed *= 0.5;
+                }
+            });
+            
+            drawPlayer();
+            
+            // Update HUD
+            time += 0.016;
+            speed = Math.floor(player.speed);
+            updateHUD();
+            
+            requestAnimationFrame(updateGame);
+        }
+        
+        function updateHUD() {
+            document.getElementById('lap').textContent = `${lap}/5`;
+            document.getElementById('time').textContent = time.toFixed(1);
+            document.getElementById('speed').textContent = speed;
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            alert(`RACE COMPLETE!\nTime: ${time.toFixed(1)}s`);
+        }
+        
+        function startGame() {
+            if (gameRunning) return;
+            
+            lap = 1;
+            time = 0;
+            speed = 0;
+            trackPosition = 0;
+            player.x = canvas.width / 2 - 20;
+            player.speed = 0;
+            player.dx = 0;
+            gameRunning = true;
+            
+            spawnOpponents();
+            updateHUD();
+            requestAnimationFrame(updateGame);
+        }
+        
+        document.addEventListener('keydown', e => {
+            if (!gameRunning) return;
+            
+            if (e.key === 'ArrowLeft') player.dx = -5;
+            if (e.key === 'ArrowRight') player.dx = 5;
+            if (e.key === 'ArrowUp') player.speed += player.acceleration * 5;
+            if (e.key === 'ArrowDown') player.speed -= player.acceleration * 10;
+        });
+        
+        document.addEventListener('keyup', e => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                player.dx = 0;
+            }
+        });
+    </script>
+</body>
+</html>
